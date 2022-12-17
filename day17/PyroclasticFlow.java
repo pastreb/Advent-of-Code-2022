@@ -1,8 +1,6 @@
 package adventofcode;
 
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.io.*;
 
 public class PyroclasticFlow {
@@ -10,7 +8,6 @@ public class PyroclasticFlow {
   public static void main(String[] args) {
     List<Character> input = read_input();
     System.out.println(solve_part_1(input));
-    System.out.println(solve_part_2(input));
   }
 
   /*
@@ -382,10 +379,10 @@ public class PyroclasticFlow {
 
   public static int solve_part_1(List<Character> input) {
     int n_rocks = 2022;
-    int max_height = 5 * n_rocks + 50;
-    int width = 7; 
-    String[][] grid = new String[max_height][width];
-    for(int i = 0; i < max_height; i++) {
+    int height = n_rocks * 5 + 50;
+    int width = 7;
+    String[][] grid = new String[height][width];
+    for(int i = 0; i < height; i++) {
       for(int j = 0; j < width; j++) {
         grid[i][j] = ".";
       }
@@ -394,7 +391,7 @@ public class PyroclasticFlow {
     int pattern_i = 0;
     int max_y = -1;
     for(int i = 0; i < n_rocks; i++) {
-      Rock rock = new Rock(i%5, max_y + 4);
+      Rock rock = new Rock(((int) i%5), max_y + 4);
       while(true) {
         // Consider Jet of Gas:
         if(input.get(pattern_i) == '<') {
@@ -413,13 +410,12 @@ public class PyroclasticFlow {
           break;
         }
       }
-      // print_grid(grid, max_y);
     }
     return max_y+1;
   }
 
-  public static void print_grid(String[][] grid, int max_y) {
-    for(int i = max_y+10; i >= 0; i--) {
+  public static void print_grid(String[][] grid) {
+    for(int i = grid.length-1; i >= 0; i--) {
       for(int j = 0; j < grid[i].length; j++) {
         System.out.print(grid[i][j]);
       }
@@ -428,14 +424,55 @@ public class PyroclasticFlow {
     System.out.println();
   }
 
+  public static int cleanup_grid(String[][] grid, int normalized_max_y) {
+    int height = grid.length;
+    int width = grid[0].length;
+    // Find the highest row that is full:
+    int row = height-1;
+    while(row >= 0) {
+      boolean row_blocked = true;
+      for(int x = 0; x < width; x++) {
+        if(grid[row][x].equals(".")) {
+          row_blocked = false;
+        }
+      }
+      if(row_blocked) {
+        break;
+      }
+      row--;
+    }
+    if(row == -1) {
+      return normalized_max_y;
+    }
+    System.out.println("row: " + row);
+    // Only keep stuff that is higher than row
+    for(int i = 0; i < height-row; i++) {
+      for(int j = 0; j < width; j++) {
+        grid[i][j] = grid[row+i][j];
+      }
+    }
+    for(int i = height-row; i < height; i++) {
+      for(int j = 0; j < width; j++) {
+        grid[i][j] = ".";
+      }
+    }
+    return normalized_max_y = height-row-1;
+  }
+
   /*
   --- Part Two ---
-  
-  */
+  The elephants are not impressed by your simulation. They demand to know how 
+  tall the tower will be after 1000000000000 rocks have stopped! Only then 
+  will they feel confident enough to proceed through the cave.
 
-  public static int solve_part_2(List<Character> input) {
-    return 0;
-  }
+  In the example above, the tower would be 1514285714288 units tall!
+
+  How tall will the tower be after 1000000000000 rocks have stopped?
+
+  -> The key insight here is that we cannot keep the whole thing.
+     Instead, we can discard the rows that "cannot be reached" anymore
+     (due to blocking Rocks) and use a smaller matrix.
+  */
 
   public static List<Character> read_input() {
     List<Character> input_list = new ArrayList<Character>();
