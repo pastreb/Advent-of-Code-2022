@@ -391,18 +391,19 @@ public class ProboscideaVolcanium {
 
   public static Map<String,Integer> memory = new HashMap<String,Integer>();
 
+  public static int total_nonzero_rates = 0;
+
   public static int recurse(Map<String,Valve> input, int minute, String me, String elephant, 
       SortedSet<String> opened_valves, Set<String> me_visits_since_last_open, Set<String> elephant_visits_since_last_open) {
     // Look into memory if we already computed the value:
     String key_1 = me + elephant + minute;
-    String key_2 = elephant + me + minute;
     for(String valve : opened_valves) {
       key_1 += valve;
-      key_2 += valve;
     }
     if(memory.containsKey(key_1)) {
       return memory.get(key_1);
     }
+    String key_2 = key_1.substring(2, 4) + key_1.substring(0, 2) + key_1.substring(4); // switch me and elephant
     if(memory.containsKey(key_2)) {
       return memory.get(key_2);
     }
@@ -411,7 +412,8 @@ public class ProboscideaVolcanium {
     for(String valve : opened_valves) {
       pressure += input.get(valve).flow_rate;
     }
-    if(minute == 1) {
+    if(minute == 1 || opened_valves.size() == total_nonzero_rates) { // once we are done or everything is opened, we can just compute the total pressure
+      pressure *= minute;
       // Memorize value:
       memory.put(key_1, pressure);
       memory.put(key_2, pressure);
@@ -427,47 +429,41 @@ public class ProboscideaVolcanium {
     // Case 1: Both Move
     for(String neighbor_1 : my_neighbors) {
       for(String neighbor_2 : elephant_neighbors) {
-        Set<String> my_visits = new HashSet<String>();
-        my_visits.addAll(me_visits_since_last_open);
-        my_visits.add(neighbor_1);
-        Set<String> elephant_visits = new HashSet<String>();
-        elephant_visits.addAll(elephant_visits_since_last_open);
-        elephant_visits.add(neighbor_2);
-        max = Math.max(max, pressure + recurse(input, minute-1, neighbor_1, neighbor_2, opened_valves, my_visits, elephant_visits));
+        me_visits_since_last_open.add(neighbor_1);
+        elephant_visits_since_last_open.add(neighbor_2);
+        max = Math.max(max, pressure + recurse(input, minute-1, neighbor_1, neighbor_2, opened_valves, me_visits_since_last_open, elephant_visits_since_last_open));
+        me_visits_since_last_open.remove(neighbor_1);
+        elephant_visits_since_last_open.remove(neighbor_2);
       }
     }
     // Case 2: I Open, Elephant Moves
     if(!opened_valves.contains(me) && input.get(me).flow_rate > 0) {
+      opened_valves.add(me);
       for(String neighbor_2 : elephant_neighbors) {
-        SortedSet<String> new_opened_valves = new TreeSet<String>();
-        new_opened_valves.addAll(opened_valves);
-        new_opened_valves.add(me);
-        Set<String> elephant_visits = new HashSet<String>();
-        elephant_visits.addAll(elephant_visits_since_last_open);
-        elephant_visits.add(neighbor_2);
-        max = Math.max(max, pressure + recurse(input, minute-1, me, neighbor_2, new_opened_valves, new HashSet<String>(), elephant_visits));
+        elephant_visits_since_last_open.add(neighbor_2);
+        max = Math.max(max, pressure + recurse(input, minute-1, me, neighbor_2, opened_valves, new HashSet<String>(), elephant_visits_since_last_open));
+        elephant_visits_since_last_open.remove(neighbor_2);
       }
+      opened_valves.remove(me);
     }
     // Case 3: I Move, Elephant Opens
     if(!opened_valves.contains(elephant) && input.get(elephant).flow_rate > 0) {
+      opened_valves.add(elephant);
       for(String neighbor_1 : my_neighbors) {
-        SortedSet<String> new_opened_valves = new TreeSet<String>();
-        new_opened_valves.addAll(opened_valves);
-        new_opened_valves.add(elephant);
-        Set<String> my_visits = new HashSet<String>();
-        my_visits.addAll(me_visits_since_last_open);
-        my_visits.add(neighbor_1);
-        max = Math.max(max, pressure + recurse(input, minute-1, neighbor_1, elephant, new_opened_valves, my_visits, new HashSet<String>()));
+        me_visits_since_last_open.add(neighbor_1);
+        max = Math.max(max, pressure + recurse(input, minute-1, neighbor_1, elephant, opened_valves, me_visits_since_last_open, new HashSet<String>()));
+        me_visits_since_last_open.remove(neighbor_1);
       }
+      opened_valves.remove(elephant);
     }
     // Case 4: Both Open
     if(!opened_valves.contains(me) && !opened_valves.contains(elephant) 
         && input.get(me).flow_rate > 0 && input.get(elephant).flow_rate > 0) {
-      SortedSet<String> new_opened_valves = new TreeSet<String>();
-      new_opened_valves.addAll(opened_valves);
-      new_opened_valves.add(me);
-      new_opened_valves.add(elephant);
-      max = Math.max(max, pressure + recurse(input, minute-1, me, elephant, new_opened_valves, new HashSet<String>(), new HashSet<String>()));
+      opened_valves.add(me);
+      opened_valves.add(elephant);
+      max = Math.max(max, pressure + recurse(input, minute-1, me, elephant, opened_valves, new HashSet<String>(), new HashSet<String>()));
+      opened_valves.remove(me);
+      opened_valves.remove(elephant);
     }
     // Memorize value:
     memory.put(key_1, max);
@@ -763,6 +759,9 @@ class Valve {
     this.name = name;
     this.flow_rate = flow_rate;
     this.neighbors = new ArrayList<String>();
+    if(flow_rate > 0) {
+      ProboscideaVolcanium.total_nonzero_rates++;
+    }
   }
 
   public void add_neighbor(String other_name) {
