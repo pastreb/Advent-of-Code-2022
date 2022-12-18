@@ -10,6 +10,7 @@ public class BoilingBoulders {
   public static void main(String[] args) {
     List<Droplet> input = read_input();
     System.out.println(solve_part_1(input));
+    System.out.println(solve_part_2(input));
   }
 
   /*
@@ -61,7 +62,7 @@ public class BoilingBoulders {
   public static int solve_part_1(List<Droplet> input) {
     Set<String> droplet_set = new HashSet<String>();
     for(Droplet droplet : input) {
-      droplet_set.add(droplet.getString());
+      droplet_set.add(get_string(droplet.x, droplet.y, droplet.z));
     }
     int exposed_sides = 0;
     for(Droplet droplet: input) {
@@ -72,6 +73,10 @@ public class BoilingBoulders {
       }
     }
     return exposed_sides;
+  }
+
+  public static String get_string(int x, int y, int z) {
+    return x + "," + y + "," + z;
   }
 
   /*
@@ -93,8 +98,78 @@ public class BoilingBoulders {
   */
 
   public static int solve_part_2(List<Droplet> input) {
-    return 0;
+    Set<String> droplets = new HashSet<String>();
+    for(Droplet droplet : input) {
+      droplets.add(get_string(droplet.x, droplet.y, droplet.z));
+    }
+    
+    // Create border around droplet:
+    min_x--;
+    max_x++;
+    min_y--;
+    max_y++;
+    min_z--;
+    max_z++;
+
+    Set<String> outside = new HashSet<String>();
+    Droplet definitely_outside = new Droplet(max_x, max_y, max_z); // definitely filled with air
+    outside.add(get_string(definitely_outside.x, definitely_outside.y, definitely_outside.z));    
+
+    Stack<Droplet> stack = new Stack<Droplet>();
+    stack.push(definitely_outside);
+    Set<String> visited = new HashSet<String>();
+    while(!stack.empty()) {
+      Droplet current = stack.pop();
+      int x = current.x;
+      int y = current.y;
+      int z = current.z;
+      if(visited.contains(get_string(x, y, z))) {
+        continue;
+      }
+      visited.add(get_string(x, y, z));
+      if(x+1 <= max_x && !visited.contains(get_string(x+1, y, z)) && !droplets.contains(get_string(x+1, y, z))) { // air that is not visited
+        outside.add(get_string(x+1, y, z));
+        stack.push(new Droplet(x+1, y, z));
+      }
+      if(x-1 >= min_x && !visited.contains(get_string(x-1, y, z)) && !droplets.contains(get_string(x-1, y, z))) { // air that is not visited
+        outside.add(get_string(x-1, y, z));
+        stack.push(new Droplet(x-1, y, z));
+      }
+      if(y+1 <= max_y && !visited.contains(get_string(x, y+1, z)) && !droplets.contains(get_string(x, y+1, z))) { // air that is not visited
+        outside.add(get_string(x, y+1, z));
+        stack.push(new Droplet(x, y+1, z));
+      }
+      if(y-1 >= min_y && !visited.contains(get_string(x, y-1, z)) && !droplets.contains(get_string(x, y-1, z))) { // air that is not visited
+        outside.add(get_string(x, y-1, z));
+        stack.push(new Droplet(x, y-1, z));
+      }
+      if(z+1 <= max_z && !visited.contains(get_string(x, y, z+1)) && !droplets.contains(get_string(x, y, z+1))) { // air that is not visited
+        outside.add(get_string(x, y, z+1));
+        stack.push(new Droplet(x, y, z+1));
+      }
+      if(z-1 >= min_z && !visited.contains(get_string(x, y, z-1)) && !droplets.contains(get_string(x, y, z-1))) { // air that is not visited
+        outside.add(get_string(x, y, z-1));
+        stack.push(new Droplet(x, y, z-1));
+      }
+    }
+
+    int exposed_sides = 0;
+    for(Droplet droplet: input) {
+      for(String neighbor : droplet.getNeighborStrings()) {
+        if(outside.contains(neighbor)) {
+          exposed_sides++;
+        }
+      }
+    }
+    return exposed_sides;
   }
+
+  public static int min_x = Integer.MAX_VALUE;
+  public static int max_x = Integer.MIN_VALUE;
+  public static int min_y = Integer.MAX_VALUE;
+  public static int max_y = Integer.MIN_VALUE;
+  public static int min_z = Integer.MAX_VALUE;
+  public static int max_z = Integer.MIN_VALUE;
 
   public static List<Droplet> read_input() {
     List<Droplet> input_list = new ArrayList<Droplet>();
@@ -109,14 +184,20 @@ public class BoilingBoulders {
         int z = -1;
         if(number_matcher.find()) {
           x = Integer.valueOf(number_matcher.group());
+          min_x = Math.min(min_x, x);
+          max_x = Math.max(max_x, x);
         }
         if(number_matcher.find()) {
           y = Integer.valueOf(number_matcher.group());
+          min_y = Math.min(min_y, y);
+          max_y = Math.max(max_y, y);
         }
         if(number_matcher.find()) {
           z = Integer.valueOf(number_matcher.group());
         }
         input_list.add(new Droplet(x, y, z));
+        min_z = Math.min(min_z, z);
+        max_z = Math.max(max_z, z);
       }
       scanner.close();
     } catch (FileNotFoundException e) {
@@ -137,18 +218,15 @@ class Droplet {
     this.z = z;
   }
 
-  public String getString() {
-    return "" + x + "," + y + "," + z;
-  }
-
   public String[] getNeighborStrings() {
     String[] neighbors = new String[6];
-    neighbors[0] = "" + (x+1) + "," + y + "," + z;
-    neighbors[1] = "" + (x-1) + "," + y + "," + z;
-    neighbors[2] = "" + x + "," + (y+1) + "," + z;
-    neighbors[3] = "" + x + "," + (y-1) + "," + z;
-    neighbors[4] = "" + x + "," + y + "," + (z+1);
-    neighbors[5] = "" + x + "," + y + "," + (z-1);
+    neighbors[0] = BoilingBoulders.get_string(x+1, y, z);
+    neighbors[1] = BoilingBoulders.get_string(x-1, y, z);
+    neighbors[2] = BoilingBoulders.get_string(x, y+1, z);
+    neighbors[3] = BoilingBoulders.get_string(x, y-1, z);
+    neighbors[4] = BoilingBoulders.get_string(x, y, z+1);
+    neighbors[5] = BoilingBoulders.get_string(x, y, z-1);
     return neighbors;
   }
+
 }
