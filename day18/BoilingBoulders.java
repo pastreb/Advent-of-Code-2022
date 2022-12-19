@@ -194,10 +194,10 @@ public class BoilingBoulders {
         }
         if(number_matcher.find()) {
           z = Integer.valueOf(number_matcher.group());
+          min_z = Math.min(min_z, z);
+          max_z = Math.max(max_z, z);
         }
         input_list.add(new Droplet(x, y, z));
-        min_z = Math.min(min_z, z);
-        max_z = Math.max(max_z, z);
       }
       scanner.close();
     } catch (FileNotFoundException e) {
