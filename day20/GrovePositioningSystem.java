@@ -2,13 +2,15 @@ package adventofcode;
 
 import java.util.*;
 import java.io.*;
+import java.math.BigInteger;
 
 public class GrovePositioningSystem {
 
   public static void main(String[] args) {
     List<MyInteger> input = read_input();
     System.out.println(solve_part_1(input));
-    System.out.println(solve_part_2(input));
+    long decription_key = 811589153;
+    System.out.println(solve_part_2(input, decription_key));
   }
 
   /*
@@ -89,7 +91,7 @@ public class GrovePositioningSystem {
   that form the grove coordinates?
   */
 
-  public static int solve_part_1(List<MyInteger> input) {
+  public static long solve_part_1(List<MyInteger> input) {
     int n = input.size();
     List<MyInteger> decrypted_input = new LinkedList();
     MyInteger zero = null;
@@ -122,7 +124,8 @@ public class GrovePositioningSystem {
 
   public static void print_list(List<MyInteger> list) {
     for(int k = 0; k < list.size(); k++) {
-      System.out.print(list.get(k).value + " ");
+      MyInteger next = list.get(k);
+      System.out.print((next.big_value == null? next.value : next.big_value) + " ");
     }
     System.out.println();
   }
@@ -184,11 +187,38 @@ public class GrovePositioningSystem {
 
   Apply the decryption key and mix your encrypted file ten times. What is the 
   sum of the three numbers that form the grove coordinates?
-  
   */
 
-  public static long solve_part_2(List<MyInteger> input) {
-    return 0;
+  public static BigInteger solve_part_2(List<MyInteger> input, long decription_key) {
+    int n = input.size();
+    List<MyInteger> decrypted_input = new LinkedList();
+    MyInteger zero = null;
+    for(int i = 0; i < n; i++) {
+      decrypted_input.add(input.get(i));
+      if(input.get(i).value == 0) {
+        zero = input.get(i);
+      }
+      input.get(i).set_big_value(decription_key);
+    }
+    for(int round = 0; round < 10; round++) {
+      for(int i = 0; i < n; i++) {
+        MyInteger current = input.get(i);
+        int current_index = decrypted_input.indexOf(current);
+        int offset = current.big_value.mod(BigInteger.valueOf(input.size()-1)).intValue();
+        int new_index = current_index + offset;
+        while(new_index >= n) {
+          new_index -= (n-1);
+        }
+        decrypted_input.remove(current);
+        decrypted_input.add(new_index, current);        
+      }
+    }
+    int index_of_zero = decrypted_input.indexOf(zero);
+    BigInteger out = BigInteger.ZERO;
+    out = out.add(decrypted_input.get((index_of_zero + 1000) % input.size()).big_value);
+    out = out.add(decrypted_input.get((index_of_zero + 2000) % input.size()).big_value);
+    out = out.add(decrypted_input.get((index_of_zero + 3000) % input.size()).big_value);
+    return out;
   }
 
   public static List<MyInteger> read_input() {
@@ -209,9 +239,17 @@ public class GrovePositioningSystem {
 
 class MyInteger {
   public int value;
+  public BigInteger big_value;
 
+  // Constructor for part 1
   public MyInteger(int value) {
     this.value = value;
+  }
+
+  // For part 2
+  public void set_big_value(long factor) {
+    this.big_value = BigInteger.valueOf(value);
+    this.big_value = this.big_value.multiply(BigInteger.valueOf(factor));
   }
 
 }
