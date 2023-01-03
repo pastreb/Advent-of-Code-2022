@@ -8,7 +8,7 @@ public class MonkeyMatch {
   public static void main(String[] args) {
     List<Monkey> input = read_input();
     System.out.println(solve_part_1(input));
-    System.out.println(solve_part_2(input));
+    System.out.println(solve_part_2(input)); // outputs an equation to be solved for x
   }
 
   /*
@@ -127,8 +127,41 @@ public class MonkeyMatch {
   What number do you yell to pass root's equality test?
   */
 
-  public static int solve_part_2(List<Monkey> input) {
-    return 0;
+  public static String solve_part_2(List<Monkey> input) {
+    Stack<Monkey> stack = new Stack<Monkey>();
+    for(Monkey monkey : input) {
+      if(!(monkey instanceof BinOpMonkey)) { // first consider all number monkeys
+        stack.push(monkey);
+        if(monkey.name.equals("humn")) { // update the humn
+          monkey.string_value = "x";
+        }
+      }
+      if(monkey.name.equals("root")) { // update the root
+        ((BinOpMonkey) monkey).operation = BinOp.Eq;
+      }
+    }
+    while(!stack.empty()) {
+      Monkey monkey = stack.pop();
+      for(Monkey other_monkey : input) {
+        if(other_monkey instanceof BinOpMonkey) {
+          BinOpMonkey bin_op_monkey = (BinOpMonkey) other_monkey;
+          if(bin_op_monkey.operand_1_given_by.equals(monkey.name)) {
+            bin_op_monkey.operand_1_string = monkey.string_value;
+          } 
+          if(bin_op_monkey.operand_2_given_by.equals(monkey.name)) {
+            bin_op_monkey.operand_2_string = monkey.string_value;
+          }
+          if(bin_op_monkey.possibly_evaluate_string()) { 
+            if(bin_op_monkey.name.equals("root")) {
+              return bin_op_monkey.string_value;
+            } else {
+              stack.push(bin_op_monkey);
+            }
+          }
+        }
+      }
+    }
+    return "";
   }
 
   public static List<Monkey> read_input() {
@@ -166,20 +199,28 @@ public class MonkeyMatch {
 
 class Monkey { 
   public String name;
-  public long number;
+  public long number; // for part 1
+  public String string_value; // for part 2
 
   public Monkey(String name, long number) {
     this.name = name;
     this.number = number;
+    if(number > Long.MIN_VALUE) {
+      this.string_value = String.valueOf(number);
+    } else {
+      this.string_value = "";
+    }
   }
 }
 
 class BinOpMonkey extends Monkey {
   
   public BinOp operation;
-  public long operand_1 = Long.MIN_VALUE;
+  public long operand_1 = Long.MIN_VALUE; // for part 1
+  public String operand_1_string = ""; // for part 2
   public String operand_1_given_by;
-  public long operand_2 = Long.MIN_VALUE;
+  public long operand_2 = Long.MIN_VALUE; // for part 1
+  public String operand_2_string = ""; // for part 2
   public String operand_2_given_by;
 
   public BinOpMonkey(String name, String operand_1_given_by, String operand_2_given_by, BinOp operation) {
@@ -189,7 +230,7 @@ class BinOpMonkey extends Monkey {
     this.operation = operation;
   }
 
-  public Boolean possibly_evaluate() {
+  public Boolean possibly_evaluate() { // for part 1
     if(this.number != Long.MIN_VALUE || this.operand_1 == Long.MIN_VALUE || this.operand_2 == Long.MIN_VALUE) {
       return false;
     }
@@ -204,11 +245,71 @@ class BinOpMonkey extends Monkey {
     }
     return true;
   }
+
+  public Boolean possibly_evaluate_string() { // for part 2
+    if(this.string_value != "" || this.operand_1_string == "" || this.operand_2_string == "") {
+      return false;
+    }
+    // We basically just want a long string (as simple as possible) with the equation to solve:
+    if(this.operation == BinOp.Add) {
+      // ADDITION
+      if(isParsable(this.operand_1_string) && isParsable(this.operand_2_string)) {
+        this.string_value = String.valueOf(Long.valueOf(this.operand_1_string) + Long.valueOf(this.operand_2_string));
+      } else {
+        this.string_value = this.operand_1_string + "+" + this.operand_2_string;
+      }
+    } else if(this.operation == BinOp.Sub) {
+      // SUBTRACTION
+      if(isParsable(this.operand_1_string) && isParsable(this.operand_2_string)) {
+        this.string_value = String.valueOf(Long.valueOf(this.operand_1_string) - Long.valueOf(this.operand_2_string));
+      } else if(isParsable(this.operand_2_string)) {
+        this.string_value = this.operand_1_string + "-" + this.operand_2_string;
+      } else {
+        this.string_value = this.operand_1_string + "-(" + this.operand_2_string + ")";
+      }
+    } else if(this.operation == BinOp.Mul) {
+      // MULTIPLICATION
+      if(isParsable(operand_1_string) && isParsable(operand_2_string)) {
+        this.string_value = String.valueOf(Long.valueOf(this.operand_1_string) * Long.valueOf(this.operand_2_string));
+      } else if(isParsable(this.operand_1_string)) {
+        this.string_value = this.operand_1_string + "*(" + this.operand_2_string + ")";
+      } else if(isParsable(this.operand_2_string)) {
+        this.string_value = "(" + this.operand_1_string + ")*" + this.operand_2_string;
+      } else {
+        this.string_value = "(" + this.operand_1_string + ")*" + this.operand_2_string + ")";
+      }
+    } else if(this.operation == BinOp.Div) {
+      // DIVISION
+      if(isParsable(operand_1_string) && isParsable(operand_2_string)) {
+        this.string_value = String.valueOf(Long.valueOf(this.operand_1_string) / Long.valueOf(this.operand_2_string));
+      } else if(isParsable(this.operand_1_string)) {
+        this.string_value = this.operand_1_string + "/(" + this.operand_2_string + ")";
+      } else if(isParsable(this.operand_2_string)) {
+        this.string_value = "(" + this.operand_1_string + ")/" + this.operand_2_string;
+      } else {
+        this.string_value = "(" + this.operand_1_string + ")/" + this.operand_2_string + ")";
+      }
+    } else if(this.operation == BinOp.Eq) {
+      // EQUALITY
+      this.string_value = this.operand_1_string + "=" + this.operand_2_string;
+    }
+    return true;
+  }
+
+  public Boolean isParsable(String s) {
+    try {
+      Long.parseLong(s);
+      return true;
+    } catch(NumberFormatException e) {
+      return false;
+    }
+  }
 }
 
 enum BinOp {
   Add,
   Sub,
   Mul,
-  Div
+  Div,
+  Eq
 }
