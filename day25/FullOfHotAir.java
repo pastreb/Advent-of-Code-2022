@@ -8,7 +8,6 @@ public class FullOfHotAir {
   public static void main(String[] args) {
     List<String> input = read_input();
     System.out.println(solve_part_1(input));
-    System.out.println(solve_part_2(input));
   }
 
   /*
@@ -199,11 +198,6 @@ public class FullOfHotAir {
     }
     return "";
   }
-
-  /*
-  --- Part Two ---
-  
-  */
 
   public static int solve_part_2(List<String> input) {
     return 0;
