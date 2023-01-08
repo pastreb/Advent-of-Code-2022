@@ -283,33 +283,35 @@ public class BlizzardBasin {
   */
 
   public static int solve_part_1(Blizzard blizzard) {
+    return compute_time(blizzard, 0, 0, 1, blizzard.height-1, blizzard.width-2);
+  }
 
+  // Computes the time needed to get from start to goal through the blizzard from a given starting time.
+  public static int compute_time(Blizzard blizzard, int time, int start_y, int start_x, int goal_y, int goal_x) {
+    // positions[i][j] stores true if at the current value of time, it is possible to be at position (i, j).
     boolean[][] positions = new boolean[blizzard.height][blizzard.width];
     for(int i = 0; i < blizzard.height; i++) {
       for(int j = 0; j < blizzard.width; j++) {
         positions[i][j] = false;
       }
     }
-    positions[0][1] = true; // start position
-    int time = 0;
-    // positions[i][j] stores true if at the current value of time, it is possible to be at position (i, j).
-    
-    while(true) {
-      // print(positions);
+    positions[start_y][start_x] = true;
+    while(!positions[goal_y][goal_x]) {
+      // print_positions(positions);
       time++;
       boolean[][] next_positions = new boolean[blizzard.height][blizzard.width];
-      next_positions[0][1] = true; // start position
+      next_positions[start_y][start_x] = true;
       String[][] next_blizzard_positions = blizzard.blizzard_state_by_minute.get(time%blizzard.blizzard_state_by_minute.size());
-      for(int i = 1; i < blizzard.height; i++) {
-        for(int j = 1; j < blizzard.width-1; j++) {
-          if(i == blizzard.height-1) {
-            if(j == blizzard.width-2 && positions[i-1][j]) { // We reached the goal
-              return time;
-            }
-          } else if(next_blizzard_positions[i][j].equals(".") && (positions[i][j] || positions[i-1][j] || positions[i+1][j] || positions[i][j-1] || positions[i][j+1])) {
+      for(int i = 0; i < blizzard.height; i++) {
+        for(int j = 0; j < blizzard.width; j++) {
+          if(next_blizzard_positions[i][j].equals(".") && 
+              (positions[i][j] 
+                || (i > 0 && positions[i-1][j]) 
+                || (i < blizzard.height-1 && positions[i+1][j]) 
+                || (j > 0 && positions[i][j-1]) 
+                || (j < blizzard.width-1 && positions[i][j+1]))) {
             // There is no blizzard at the considered position and we were at a neighbor (or already here) just before
             next_positions[i][j] = true;
-            
           } else {
             next_positions[i][j] = false;
           }
@@ -317,9 +319,11 @@ public class BlizzardBasin {
       }
       positions = next_positions;
     }
+
+    return time;
   }
 
-  public static void print(boolean[][] positions) {
+  public static void print_positions(boolean[][] positions) {
     for(int i = 0; i < positions.length; i++) {
       for(int j = 0; j < positions[0].length; j++) {
         if(positions[i][j]) {
@@ -335,18 +339,36 @@ public class BlizzardBasin {
 
   /*
   --- Part Two ---
-  
+  As the expedition reaches the far side of the valley, one of the Elves 
+  looks especially dismayed:
+
+  He forgot his snacks at the entrance to the valley!
+
+  Since you're so good at dodging blizzards, the Elves humbly request that 
+  you go back for his snacks. From the same initial conditions, how quickly 
+  can you make it from the start to the goal, then back to the start, then 
+  back to the goal?
+
+  In the above example, the first trip to the goal takes 18 minutes, the trip 
+  back to the start takes 23 minutes, and the trip back to the goal again 
+  takes 13 minutes, for a total time of 54 minutes.
+
+  What is the fewest number of minutes required to reach the goal, go back to 
+  the start, then reach the goal again?
   */
 
   public static int solve_part_2(Blizzard blizzard) {
-    return 0;
+    int time = compute_time(blizzard, 0, 0, 1, blizzard.height-1, blizzard.width-2); // first time at goal
+    time = compute_time(blizzard, time, blizzard.height-1, blizzard.width-2, 0, 1); // back at start
+    time = compute_time(blizzard, time, 0, 1, blizzard.height-1, blizzard.width-2); // second time at goal
+    return time;
   }
 
   public static Blizzard read_input() {
     Blizzard blizzard = null;
     try {
       File input = new File("input.txt");
-      // First, we want to determine the with and height of the blizzard:
+      // First, we want to determine the width and height of the blizzard:
       Scanner scanner = new Scanner(input);
       int width = 0;
       int height = 0;
@@ -392,6 +414,7 @@ class Blizzard {
     this.current_line_number++;
   }
 
+  // Generates all possible (finite) states the blizzards can be in.
   public void generate_all_blizzard_states() {
     String[][] current_state = this.blizzard_state_by_minute.get(0);
     int next_state_number = 1;
@@ -429,6 +452,7 @@ class Blizzard {
       }
       // Check whether this state was already encountered:
       if(check_equal_states(0, next_state_number)) {
+        this.blizzard_state_by_minute.remove(next_state_number);
         break;
       }
       current_state = next_state;
@@ -449,6 +473,7 @@ class Blizzard {
     return new_state;
   }
 
+  // We need to sort the direction strings in order to be able to compare them.
   private String sort_direction_string(String s) {
     String new_s = "";
     for(String dir : new String[]{"<", ">", "^", "v"}) { // order in which we want them
@@ -462,6 +487,7 @@ class Blizzard {
     return new_s;
   }
 
+  // Checks if state b is the same as a.
   private boolean check_equal_states(int a, int b) {
     String[][] state_1 = this.blizzard_state_by_minute.get(a);
     String[][] state_2 = this.blizzard_state_by_minute.get(b);
