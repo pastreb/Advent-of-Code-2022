@@ -186,15 +186,15 @@ public class FullOfHotAir {
     }
     int remainder = (int) (number % 5);
     if(remainder == 0) {
-      return translate_to_snafu((number + 2) / 5) + "0";
+      return translate_to_snafu(number / 5) + "0";
     } else if(remainder == 1) {
-      return translate_to_snafu((number + 2) / 5) + "1";
+      return translate_to_snafu(number / 5) + "1";
     } else if(remainder == 2) {
-      return translate_to_snafu((number + 2) / 5) + "2";
-    } else if(remainder == 3) {
+      return translate_to_snafu(number / 5) + "2";
+    } else if(remainder == 3) { // in these special cases, we add something to compensate the negative amounts
       return translate_to_snafu((number + 2) / 5) + "=";
-    } else if(remainder == 4) {
-      return translate_to_snafu((number + 2) / 5) + "-";
+    } else if(remainder == 4) { // in these special cases, we add something to compensate the negative amounts
+      return translate_to_snafu((number + 1) / 5) + "-";
     }
     return "";
   }
